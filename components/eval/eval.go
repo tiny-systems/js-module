@@ -101,12 +101,12 @@ func (h *Component) Handle(ctx context.Context, handler module.Handler, port str
 			return fmt.Errorf("invalid settings")
 		}
 
+		h.settings = in
+
 		err := h.init(ctx, in)
 		if err != nil {
 			return err
 		}
-
-		h.settings = in
 
 	case RequestPort:
 
