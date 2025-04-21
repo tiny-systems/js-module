@@ -31,7 +31,7 @@ type OutputData any
 
 type Script struct {
 	Name    string `json:"name" required:"true" title:"File name" Description:"e.g. utils.js"`
-	Content string `json:"content" required:"true" title:"Javascript code" format:"textarea"`
+	Content string `json:"content" required:"true" title:"Javascript code" format:"code"`
 }
 
 // ScriptItem to avoid confusion of Script definition generated from Scripts array and from Script property
