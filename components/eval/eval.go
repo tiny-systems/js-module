@@ -3,7 +3,9 @@ package eval
 import (
 	"context"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/grafana/sobek"
+	"github.com/tiny-systems/js-module/lib"
 	"github.com/tiny-systems/js-module/modules"
 	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/registry"
@@ -23,7 +25,7 @@ const (
 	defaultExport = "default"
 )
 
-var goModules = map[string]modules.Module{}
+var goModules = map[string]lib.Module{}
 
 type Context any
 type InputData any
@@ -51,7 +53,7 @@ type Error struct {
 
 type Request struct {
 	Context   Context   `json:"context,omitempty" configurable:"true" title:"Context" description:"Arbitrary message to be send alongside with rendered content"`
-	InputData InputData `json:"inputData,omitempty" configurable:"true" title:"Input data" description:"Input data"`
+	InputData InputData `json:"inputData,omitempty" configurable:"true" title:"Input data" description:"Input data" prompt:"generate JSON schema"`
 }
 
 type Response struct {
@@ -129,9 +131,20 @@ func (h *Component) Handle(ctx context.Context, handler module.Handler, port str
 				Error:   err.Error(),
 			})
 		}
+
+		result := res.Export()
+
+		if pr, ok := result.(*sobek.Promise); ok {
+			if pr.State() != sobek.PromiseStateFulfilled {
+				spew.Dump(fmt.Errorf("%s", pr.Result().Export()))
+				return fmt.Errorf("%s", pr.Result().Export())
+			}
+			result = pr.Result().Export()
+		}
+
 		return handler(ctx, ResponsePort, Response{
 			Context:    in.Context,
-			OutputData: res.Export(),
+			OutputData: result,
 		})
 
 	default:

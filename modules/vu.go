@@ -3,6 +3,7 @@ package modules
 import (
 	"context"
 	"github.com/grafana/sobek"
+	"github.com/tiny-systems/js-module/lib"
 )
 
 type ModuleVU struct {
@@ -21,3 +22,5 @@ func (m *ModuleVU) Context() context.Context {
 func (m *ModuleVU) Runtime() *sobek.Runtime {
 	return m.runtime
 }
+
+var _ lib.VU = (*ModuleVU)(nil)

@@ -2,17 +2,18 @@ package modules
 
 import (
 	"github.com/grafana/sobek"
+	"github.com/tiny-systems/js-module/lib"
 )
 
 const jsDefaultExportIdentifier = "default"
 
 type vubox struct {
-	vu VU
+	vu lib.VU
 }
 
 // goModule This sobek.ModuleRecord wrapper for go/js module which conforms to modules.Module interface
 type goModule struct {
-	m                      Module
+	m                      lib.Module
 	exportedNames          []string
 	exportedNamesCallbacks []func([]string)
 }
@@ -70,7 +71,7 @@ func (gm *goModule) ResolveExport(exportName string, _ ...sobek.ResolveSetElemen
 }
 
 type goModuleInstance struct {
-	mi            Instance
+	mi            lib.Instance
 	rt            *sobek.Runtime
 	defaultExport sobek.Value
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/grafana/sobek"
 	"github.com/grafana/sobek/parser"
+	"github.com/tiny-systems/js-module/lib"
 	"io"
 	"io/fs"
 	"net/http"
@@ -18,7 +19,7 @@ type Resolver struct {
 	// cache module-name => ModuleRecord
 	cache map[string]cacheElement
 	// built in modules
-	goModules map[string]Module
+	goModules map[string]lib.Module
 	//
 	// virtual local file system
 	fs fs.FS
@@ -29,7 +30,7 @@ type cacheElement struct {
 	err error
 }
 
-func NewResolver(fs fs.FS, goModules map[string]Module, vu VU) *Resolver {
+func NewResolver(fs fs.FS, goModules map[string]lib.Module, vu lib.VU) *Resolver {
 
 	rt := vu.Runtime()
 	// TODO:figure out if we can remove this
