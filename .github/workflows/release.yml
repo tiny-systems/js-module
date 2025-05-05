@@ -16,4 +16,5 @@ jobs:
           echo "Preparing a release"
           echo "Module name ${{ github.event.repository.name }}"
           go mod tidy
+          go test ./...
           go run cmd/main.go tools build --version ${{github.ref_name}} --name github.com/${{ github.repository }} --devkey ${{secrets.TINY_DEV_SECRET}}

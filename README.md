@@ -1,2 +1,3 @@
-# Tiny Systems Example module
-Example module for the Tiny Systems platform.
+# Tiny Systems JS module
+Experimental module provides components to execute Javascript ES5. ESM modules over HTTP are supported.
+
