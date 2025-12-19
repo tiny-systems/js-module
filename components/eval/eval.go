@@ -42,8 +42,8 @@ type ScriptItem Script
 type Settings struct {
 	EnableErrorPort bool         `json:"enableErrorPort" required:"true" title:"Enable Error Port" description:"If error happen, error port will emit an error message" tab:"Settings"`
 	OutputData      OutputData   `json:"outputData" configurable:"true" title:"Output object" description:"Specify schema and example data of the output" tab:"Settings"`
-	Script          Script       `json:"script" required:"true" title:"Script" description:"Full ECMAScript 5.1 support. Experimental ESM support." tab:"Main script"`
-	Modules         []ScriptItem `json:"modules" required:"true" title:"Modules" description:"Full ECMAScript 5.1 support. Experimental ESM support." uniqueItems:"true" tab:"Includes"`
+	Script          Script       `json:"script" required:"true" title:"Script" description:"Full ECMAScript 5.1 support. Experimental ESM support. Please CDN only ESM modules" tab:"Main script"`
+	Modules         []ScriptItem `json:"modules" required:"true" title:"Modules" description:"Full ECMAScript 5.1 support. Experimental ESM support. Please CDN only ESM modules." uniqueItems:"true" tab:"Includes"`
 }
 
 type Error struct {
@@ -93,7 +93,7 @@ func (h *Component) GetInfo() module.ComponentInfo {
 	}
 }
 
-func (h *Component) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
+func (h *Component) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) any {
 
 	switch port {
 	case module.SettingsPort:
@@ -218,19 +218,18 @@ func (h *Component) Ports() []module.Port {
 			Name:          RequestPort,
 			Label:         "Request",
 			Position:      module.Left,
-			Source:        true,
 			Configuration: Request{},
 		},
 		{
 			Name:          ResponsePort,
 			Position:      module.Right,
 			Label:         "Response",
+			Source:        true,
 			Configuration: Response{},
 		},
 		{
 			Name:          module.SettingsPort,
 			Label:         "Settings",
-			Source:        true,
 			Configuration: h.settings,
 		},
 	}
@@ -241,7 +240,7 @@ func (h *Component) Ports() []module.Port {
 		Position:      module.Bottom,
 		Name:          ErrorPort,
 		Label:         "Error",
-		Source:        false,
+		Source:        true,
 		Configuration: Error{},
 	})
 }

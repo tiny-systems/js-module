@@ -62,7 +62,7 @@ func TestComponent_Handle(t *testing.T) {
 				{
 					port: RequestPort,
 					msg:  Request{},
-					handler: func(_ context.Context, port string, data interface{}) error {
+					handler: func(_ context.Context, port string, data any) any {
 						if port != ResponsePort {
 							return fmt.Errorf("response sent to the wrong port: %s", port)
 						}
@@ -92,7 +92,7 @@ func TestComponent_Handle(t *testing.T) {
 				{
 					port: RequestPort,
 					msg:  Request{},
-					handler: func(_ context.Context, port string, data interface{}) error {
+					handler: func(_ context.Context, port string, data any) any {
 						if port != ResponsePort {
 							return fmt.Errorf("response sent to the wrong port: %s", port)
 						}
@@ -126,7 +126,7 @@ func TestComponent_Handle(t *testing.T) {
 					msg: Request{
 						InputData: "hello",
 					},
-					handler: func(_ context.Context, port string, data interface{}) error {
+					handler: func(_ context.Context, port string, data any) any {
 						if port != ResponsePort {
 							return fmt.Errorf("response sent to the wrong port: %s", port)
 						}
@@ -159,7 +159,7 @@ func TestComponent_Handle(t *testing.T) {
 					msg: Request{
 						InputData: "hello",
 					},
-					handler: func(_ context.Context, port string, data interface{}) error {
+					handler: func(_ context.Context, port string, data any) any {
 						if port != ResponsePort {
 							return fmt.Errorf("response sent to the wrong port: %s", port)
 						}
@@ -189,7 +189,7 @@ func TestComponent_Handle(t *testing.T) {
 				{
 					port: RequestPort,
 					msg:  Request{},
-					handler: func(_ context.Context, port string, data interface{}) error {
+					handler: func(_ context.Context, port string, data any) any {
 						return nil
 					},
 					wantErr: true,
@@ -212,7 +212,7 @@ func TestComponent_Handle(t *testing.T) {
 					msg: Request{
 						InputData: "hello",
 					},
-					handler: func(_ context.Context, port string, data interface{}) error {
+					handler: func(_ context.Context, port string, data any) any {
 						if port != ResponsePort {
 							return fmt.Errorf("response sent to the wrong port: %s", port)
 						}
