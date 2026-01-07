@@ -3,6 +3,7 @@ package eval
 import (
 	"context"
 	"fmt"
+	"github.com/tiny-systems/module/api/v1alpha1"
 	"github.com/tiny-systems/module/module"
 	"testing"
 )
@@ -23,7 +24,7 @@ func TestComponent_Handle(t *testing.T) {
 
 			args: []args{
 				{
-					port:    module.SettingsPort,
+					port:    v1alpha1.SettingsPort,
 					wantErr: true,
 					msg: Settings{
 						Script: Script{
@@ -38,7 +39,7 @@ func TestComponent_Handle(t *testing.T) {
 
 			args: []args{
 				{
-					port:    module.SettingsPort,
+					port:    v1alpha1.SettingsPort,
 					wantErr: true,
 					msg: Settings{
 						Script: Script{
@@ -52,7 +53,7 @@ func TestComponent_Handle(t *testing.T) {
 			name: "success match result string",
 			args: []args{
 				{
-					port: module.SettingsPort,
+					port: v1alpha1.SettingsPort,
 					msg: Settings{
 						Script: Script{
 							Content: `export default function () { return "result";}`,
@@ -82,7 +83,7 @@ func TestComponent_Handle(t *testing.T) {
 			name: "success match result check type int",
 			args: []args{
 				{
-					port: module.SettingsPort,
+					port: v1alpha1.SettingsPort,
 					msg: Settings{
 						Script: Script{
 							Content: `export default function () { return 34;}`,
@@ -114,7 +115,7 @@ func TestComponent_Handle(t *testing.T) {
 			name: "success match response use request",
 			args: []args{
 				{
-					port: module.SettingsPort,
+					port: v1alpha1.SettingsPort,
 					msg: Settings{
 						Script: Script{
 							Content: `export default function (i) { return i + " world";}`,
@@ -147,7 +148,7 @@ func TestComponent_Handle(t *testing.T) {
 			name: "success use promises",
 			args: []args{
 				{
-					port: module.SettingsPort,
+					port: v1alpha1.SettingsPort,
 					msg: Settings{
 						Script: Script{
 							Content: `export default async function (i) { return await new Promise((resolve, reject) => {resolve("done")})}`,
@@ -179,7 +180,7 @@ func TestComponent_Handle(t *testing.T) {
 			name: "reject should trigger error",
 			args: []args{
 				{
-					port: module.SettingsPort,
+					port: v1alpha1.SettingsPort,
 					msg: Settings{
 						Script: Script{
 							Content: `export default async function (i) { return await new Promise((resolve, reject) => {reject("error")})}`,
@@ -200,7 +201,7 @@ func TestComponent_Handle(t *testing.T) {
 			name: "success promise of promise",
 			args: []args{
 				{
-					port: module.SettingsPort,
+					port: v1alpha1.SettingsPort,
 					msg: Settings{
 						Script: Script{
 							Content: `export default async function (i) { return await new Promise((resolve, reject) => {resolve(new Promise((resolve, reject) => {resolve("done")}))})}`,
