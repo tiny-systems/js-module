@@ -7,6 +7,7 @@ import (
 	"github.com/grafana/sobek"
 	"github.com/tiny-systems/js-module/lib"
 	"github.com/tiny-systems/js-module/modules"
+	"github.com/tiny-systems/module/api/v1alpha1"
 	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/registry"
 	"testing/fstest"
@@ -96,7 +97,7 @@ func (h *Component) GetInfo() module.ComponentInfo {
 func (h *Component) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) any {
 
 	switch port {
-	case module.SettingsPort:
+	case v1alpha1.SettingsPort:
 		// compile template
 		in, ok := msg.(Settings)
 		if !ok {
@@ -228,7 +229,7 @@ func (h *Component) Ports() []module.Port {
 			Configuration: Response{},
 		},
 		{
-			Name:          module.SettingsPort,
+			Name:          v1alpha1.SettingsPort,
 			Label:         "Settings",
 			Configuration: h.settings,
 		},
