@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	ComponentName = "eval"
+	ComponentName = "js_eval"
 	RequestPort   = "request"
 	ResponsePort  = "response"
 	ErrorPort     = "error"
