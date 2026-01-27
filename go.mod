@@ -10,7 +10,7 @@ require (
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/viper v1.20.1
-	github.com/tiny-systems/module v0.1.253
+	github.com/tiny-systems/module v0.1.261
 )
 
 require (
@@ -206,4 +206,3 @@ require (
 )
 
 //replace github.com/tiny-systems/module => ../../module
-replace github.com/spyzhov/ajson v0.9.4 => github.com/tiny-systems/ajson v0.1.4
