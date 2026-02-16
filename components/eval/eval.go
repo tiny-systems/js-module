@@ -193,11 +193,13 @@ func (h *Component) Ports() []module.Port {
 			Configuration: Request{},
 		},
 		{
-			Name:          ResponsePort,
-			Position:      module.Right,
-			Label:         "Response",
-			Source:        true,
-			Configuration: Response{},
+			Name:     ResponsePort,
+			Position: module.Right,
+			Label:    "Response",
+			Source:   true,
+			Configuration: Response{
+				OutputData: h.settings.OutputData,
+			},
 		},
 		{
 			Name:          v1alpha1.SettingsPort,
