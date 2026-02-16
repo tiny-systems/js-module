@@ -3,15 +3,12 @@ package eval
 import (
 	"context"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/grafana/sobek"
-	"github.com/tiny-systems/js-module/lib"
 	"github.com/tiny-systems/js-module/modules"
 	"github.com/tiny-systems/module/api/v1alpha1"
 	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/registry"
 	"testing/fstest"
-	"time"
 )
 
 const (
@@ -25,8 +22,6 @@ const (
 	mainModule    = "main.js"
 	defaultExport = "default"
 )
-
-var goModules = map[string]lib.Module{}
 
 type Context any
 type InputData any
@@ -98,26 +93,18 @@ func (h *Component) Handle(ctx context.Context, handler module.Handler, port str
 
 	switch port {
 	case v1alpha1.SettingsPort:
-		// compile template
 		in, ok := msg.(Settings)
 		if !ok {
 			return fmt.Errorf("invalid settings")
 		}
-
 		h.settings = in
-
-		err := h.init(ctx, in)
-		if err != nil {
-			return err
-		}
+		return h.init(in)
 
 	case RequestPort:
-
 		in, ok := msg.(Request)
 		if !ok {
 			return fmt.Errorf("invalid input")
 		}
-
 		if h.handler == nil {
 			return fmt.Errorf("handler is not initialised")
 		}
@@ -137,7 +124,6 @@ func (h *Component) Handle(ctx context.Context, handler module.Handler, port str
 
 		if pr, ok := result.(*sobek.Promise); ok {
 			if pr.State() != sobek.PromiseStateFulfilled {
-				spew.Dump(fmt.Errorf("%s", pr.Result().Export()))
 				return fmt.Errorf("%s", pr.Result().Export())
 			}
 			result = pr.Result().Export()
@@ -149,59 +135,45 @@ func (h *Component) Handle(ctx context.Context, handler module.Handler, port str
 		})
 
 	default:
-		return fmt.Errorf("port %s is not supoprted", port)
+		return fmt.Errorf("port %s is not supported", port)
 	}
-	return nil
 }
 
-func (h *Component) init(ctx context.Context, s Settings) error {
-
+func (h *Component) init(s Settings) error {
 	if s.Script.Content == "" {
 		return fmt.Errorf("empty script")
 	}
 
 	mapFS := make(fstest.MapFS)
-
 	for _, script := range s.Modules {
 		mapFS[script.Name] = &fstest.MapFile{
 			Data: []byte(script.Content),
 		}
 	}
-
 	mapFS[mainModule] = &fstest.MapFile{
 		Data: []byte(s.Script.Content),
 	}
 
 	vm := sobek.New()
-
-	ctx, cancel := context.WithTimeout(ctx, time.Second*15)
-	defer cancel()
-
-	vu := modules.NewModuleVU(ctx, vm)
-	r := modules.NewResolver(mapFS, goModules, vu)
+	r := modules.NewResolver(mapFS)
 
 	m, err := r.Resolve(nil, mainModule)
-
 	if err != nil {
 		return err
 	}
 
 	p := m.(*sobek.SourceTextModuleRecord)
-
 	if err = p.Link(); err != nil {
 		return fmt.Errorf("failed to link source text: %w", err)
 	}
 
 	promise := vm.CyclicModuleRecordEvaluate(p, r.Resolve)
-
 	if promise.State() != sobek.PromiseStateFulfilled {
 		err = promise.Result().Export().(error)
 		return fmt.Errorf("failed to evaluate promise: %w", err)
 	}
 
-	// main module ask for handler
 	val := vm.GetModuleInstance(m).GetBindingValue(defaultExport)
-
 	fn, ok := sobek.AssertFunction(val)
 	if !ok {
 		return fmt.Errorf("failed to assert default export function")
@@ -209,7 +181,6 @@ func (h *Component) init(ctx context.Context, s Settings) error {
 
 	h.handler = fn
 	h.runtime = vm
-
 	return nil
 }
 
