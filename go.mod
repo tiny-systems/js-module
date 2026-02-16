@@ -9,7 +9,7 @@ require (
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/viper v1.20.1
-	github.com/tiny-systems/module v0.1.332
+	github.com/tiny-systems/module v0.1.333
 )
 
 require (
