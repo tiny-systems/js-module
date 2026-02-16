@@ -5,7 +5,6 @@ go 1.24.2
 toolchain go1.24.9
 
 require (
-	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/grafana/sobek v0.0.0-20250320150027-203dc85b6d98
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.10.1
@@ -37,6 +36,7 @@ require (
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/dlclark/regexp2 v1.11.4 // indirect
 	github.com/docker/docker v28.5.1+incompatible // indirect

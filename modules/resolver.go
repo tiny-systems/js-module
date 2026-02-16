@@ -3,116 +3,93 @@ package modules
 import (
 	"context"
 	"fmt"
-	"github.com/grafana/sobek"
-	"github.com/grafana/sobek/parser"
-	"github.com/tiny-systems/js-module/lib"
 	"io"
 	"io/fs"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/grafana/sobek"
+	"github.com/grafana/sobek/parser"
 )
 
+// Resolver resolves ES module specifiers from a virtual filesystem or HTTP URLs.
 type Resolver struct {
-	mu sync.Mutex
-	// cache module-name => ModuleRecord
-	cache map[string]cacheElement
-	// built in modules
-	goModules map[string]lib.Module
-	//
-	// virtual local file system
-	fs fs.FS
+	mu    sync.Mutex
+	cache map[string]cacheEntry
+	fs    fs.FS
 }
 
-type cacheElement struct {
-	m   sobek.ModuleRecord
+type cacheEntry struct {
+	mod sobek.ModuleRecord
 	err error
 }
 
-func NewResolver(fs fs.FS, goModules map[string]lib.Module, vu lib.VU) *Resolver {
-
-	rt := vu.Runtime()
-	// TODO:figure out if we can remove this
-	_ = rt.GlobalObject().DefineDataProperty("vubox",
-		rt.ToValue(vubox{vu: vu}), sobek.FLAG_FALSE, sobek.FLAG_FALSE, sobek.FLAG_FALSE)
-
-	return &Resolver{fs: fs, cache: make(map[string]cacheElement), goModules: goModules}
+// NewResolver creates a resolver backed by the given filesystem.
+// Local specifiers are read from fs, URLs starting with http:// or https:// are fetched.
+func NewResolver(fsys fs.FS) *Resolver {
+	return &Resolver{
+		fs:    fsys,
+		cache: make(map[string]cacheEntry),
+	}
 }
 
-func (s *Resolver) Resolve(_ interface{}, specifier string) (sobek.ModuleRecord, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	k, ok := s.cache[specifier]
-	if ok {
-		return k.m, k.err
+// Resolve implements the sobek module resolve callback.
+func (r *Resolver) Resolve(_ interface{}, specifier string) (sobek.ModuleRecord, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if entry, ok := r.cache[specifier]; ok {
+		return entry.mod, entry.err
 	}
 
 	var (
-		b   []byte
+		src []byte
 		err error
 	)
 
-	// check if module built int
-	var modRecord sobek.ModuleRecord
-
-	builtInModule, builtIn := s.goModules[specifier]
-	if builtIn {
-		modRecord = &goModule{
-			m: builtInModule,
-		}
+	if strings.HasPrefix(specifier, "http://") || strings.HasPrefix(specifier, "https://") {
+		src, err = fetchURL(context.Background(), specifier)
 	} else {
-
-		if strings.HasPrefix(specifier, "http://") || strings.HasPrefix(specifier, "https://") {
-			b, err = fetch(context.Background(), specifier)
-		} else {
-			b, err = fs.ReadFile(s.fs, specifier)
-		}
-
-		if err != nil {
-			s.cache[specifier] = cacheElement{err: err}
-			return nil, err
-		}
-		modRecord, err = sobek.ParseModule(specifier, string(b), s.Resolve, parser.WithSourceMapLoader(func(path string) ([]byte, error) {
-			return fetch(context.Background(), path)
-		}))
-		if err != nil {
-			s.cache[specifier] = cacheElement{err: err}
-			return nil, err
-		}
+		src, err = fs.ReadFile(r.fs, specifier)
 	}
-	s.cache[specifier] = cacheElement{m: modRecord}
 
-	return modRecord, nil
+	if err != nil {
+		r.cache[specifier] = cacheEntry{err: err}
+		return nil, err
+	}
+
+	mod, err := sobek.ParseModule(specifier, string(src), r.Resolve, parser.WithSourceMapLoader(func(path string) ([]byte, error) {
+		return fetchURL(context.Background(), path)
+	}))
+	if err != nil {
+		r.cache[specifier] = cacheEntry{err: err}
+		return nil, err
+	}
+
+	r.cache[specifier] = cacheEntry{mod: mod}
+	return mod, nil
 }
 
-func fetch(ctx context.Context, u string) ([]byte, error) {
-
+func fetchURL(ctx context.Context, u string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
 	}
-	res, err := http.DefaultClient.Do(req)
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = res.Body.Close() }()
+	defer func() { _ = resp.Body.Close() }()
 
-	if res.StatusCode != http.StatusOK {
-		switch res.StatusCode {
-		case http.StatusNotFound:
-			return nil, fmt.Errorf("not found: %s", u)
-		default:
-			return nil, fmt.Errorf("wrong status code (%d) for: %s", res.StatusCode, u)
-		}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP %d fetching %s", resp.StatusCode, u)
 	}
 
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
+	return io.ReadAll(resp.Body)
 }
