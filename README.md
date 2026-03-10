@@ -1,4 +1,4 @@
-# TinySystems JS Module
+# Tiny Systems JS Module
 
 JavaScript evaluation engine for inline scripting within flows.
 
@@ -22,10 +22,10 @@ helm install js-module tinysystems/tinysystems-operator \
 go run cmd/main.go run --name=js-module --namespace=tinysystems --version=1.0.0
 ```
 
-## Part of TinySystems
+## Part of Tiny Systems
 
-This module is part of the [TinySystems](https://github.com/tiny-systems) platform -- a visual flow-based automation engine running on Kubernetes.
+This module is part of the [Tiny Systems](https://github.com/tiny-systems) platform -- a visual flow-based automation engine running on Kubernetes.
 
 ## License
 
-This module's source code is MIT-licensed. It depends on the [TinySystems Module SDK](https://github.com/tiny-systems/module) (BSL 1.1). See [LICENSE](LICENSE) for details.
+This module's source code is MIT-licensed. It depends on the [Tiny Systems Module SDK](https://github.com/tiny-systems/module) (BSL 1.1). See [LICENSE](LICENSE) for details.
