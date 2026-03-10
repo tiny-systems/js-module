@@ -1,15 +1,15 @@
 module github.com/tiny-systems/js-module
 
-go 1.24.2
+go 1.25.0
 
-toolchain go1.24.9
+toolchain go1.25.5
 
 require (
 	github.com/grafana/sobek v0.0.0-20250320150027-203dc85b6d98
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/viper v1.20.1
-	github.com/tiny-systems/module v0.1.346
+	github.com/tiny-systems/module v0.1.357
 )
 
 require (
