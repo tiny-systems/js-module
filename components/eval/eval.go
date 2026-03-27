@@ -84,7 +84,7 @@ func (h *Component) GetInfo() module.ComponentInfo {
 	return module.ComponentInfo{
 		Name:        ComponentName,
 		Description: "JS Eval",
-		Info:        "Synchronous only javascript evaluation",
+		Info:        "JavaScript evaluation (ECMAScript 5.1 + ESM imports). Script must export a default function: export default function(inputData) { return { result: inputData.value * 2 }; }. The function receives inputData (configured via edge) as its only argument. The return value becomes outputData on the response port. Context is NOT available inside the script — it passes through automatically from request to response. Configure outputData in settings to define the output schema and example data for downstream edge validation.",
 		Tags:        []string{"js", "javascript", "engine"},
 	}
 }
