@@ -88,54 +88,55 @@ func (h *Component) GetInfo() module.ComponentInfo {
 	}
 }
 
-func (h *Component) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) any {
+// OnSettings stores the component settings.
+func (h *Component) OnSettings(_ context.Context, msg any) error {
 
-	switch port {
-	case v1alpha1.SettingsPort:
-		in, ok := msg.(Settings)
-		if !ok {
-			return fmt.Errorf("invalid settings")
-		}
-		h.settings = in
-		return h.init(in)
-
-	case RequestPort:
-		in, ok := msg.(Request)
-		if !ok {
-			return fmt.Errorf("invalid input")
-		}
-		if h.handler == nil {
-			return fmt.Errorf("handler is not initialised")
-		}
-
-		res, err := h.handler(sobek.Undefined(), h.runtime.ToValue(in.InputData))
-		if err != nil {
-			if !h.settings.EnableErrorPort {
-				return err
-			}
-			return handler(ctx, ErrorPort, Error{
-				Context: in.Context,
-				Error:   err.Error(),
-			})
-		}
-
-		result := res.Export()
-
-		if pr, ok := result.(*sobek.Promise); ok {
-			if pr.State() != sobek.PromiseStateFulfilled {
-				return fmt.Errorf("%s", pr.Result().Export())
-			}
-			result = pr.Result().Export()
-		}
-
-		return handler(ctx, ResponsePort, Response{
-			Context:    in.Context,
-			OutputData: result,
-		})
-
-	default:
-		return fmt.Errorf("port %s is not supported", port)
+	in, ok := msg.(Settings)
+	if !ok {
+		return fmt.Errorf("invalid settings")
 	}
+	h.settings = in
+	return h.init(in)
+}
+
+// Handle dispatches the RequestPort. System ports go through capabilities.
+func (h *Component) Handle(ctx context.Context, handler module.Handler, port string, msg any) any {
+	if port != RequestPort {
+		return fmt.Errorf("unknown port: %s", port)
+	}
+
+	in, ok := msg.(Request)
+	if !ok {
+		return fmt.Errorf("invalid input")
+	}
+	if h.handler == nil {
+		return fmt.Errorf("handler is not initialised")
+	}
+
+	res, err := h.handler(sobek.Undefined(), h.runtime.ToValue(in.InputData))
+	if err != nil {
+		if !h.settings.EnableErrorPort {
+			return err
+		}
+		return handler(ctx, ErrorPort, Error{
+			Context: in.Context,
+			Error:   err.Error(),
+		})
+	}
+
+	result := res.Export()
+
+	if pr, ok := result.(*sobek.Promise); ok {
+		if pr.State() != sobek.PromiseStateFulfilled {
+			return fmt.Errorf("%s", pr.Result().Export())
+		}
+		result = pr.Result().Export()
+	}
+
+	return handler(ctx, ResponsePort, Response{
+		Context:    in.Context,
+		OutputData: result,
+	})
 }
 
 func (h *Component) init(s Settings) error {
@@ -222,7 +223,10 @@ func (h *Component) Instance() module.Component {
 	}
 }
 
-var _ module.Component = (*Component)(nil)
+var (
+	_ module.Component       = (*Component)(nil)
+	_ module.SettingsHandler = (*Component)(nil)
+)
 
 func init() {
 	registry.Register(&Component{})

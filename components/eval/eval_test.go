@@ -519,10 +519,31 @@ func TestComponent_Handle(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			h := (&Component{}).Instance()
 			for _, a := range tt.args {
-				if err := h.Handle(context.Background(), a.handler, a.port, a.msg); (err != nil) != a.wantErr {
-					t.Errorf("Handle() error = %v, wantErr %v", err, a.wantErr)
+				if err := dispatch(h, a.handler, a.port, a.msg); (err != nil) != a.wantErr {
+					t.Errorf("dispatch() error = %v, wantErr %v", err, a.wantErr)
 				}
 			}
 		})
 	}
+}
+
+// dispatch mirrors what the runner does: route system ports through the
+// matching capability interface, fall back to Handle for business ports.
+// Lets the table-driven tests stay shaped around (port, msg) tuples.
+func dispatch(c module.Component, handler module.Handler, port string, msg any) error {
+	switch port {
+	case v1alpha1.SettingsPort:
+		if h, ok := c.(module.SettingsHandler); ok {
+			return h.OnSettings(context.Background(), msg)
+		}
+	case v1alpha1.ControlPort:
+		if h, ok := c.(module.ControlHandler); ok {
+			return h.OnControl(context.Background(), msg)
+		}
+	}
+	res := c.Handle(context.Background(), handler, port, msg)
+	if err, ok := res.(error); ok {
+		return err
+	}
+	return nil
 }
