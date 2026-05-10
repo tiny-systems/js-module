@@ -63,18 +63,18 @@ func TestComponent_Handle(t *testing.T) {
 				{
 					port: RequestPort,
 					msg:  Request{},
-					handler: func(_ context.Context, port string, data any) any {
+					handler: func(_ context.Context, port string, data any) module.Result {
 						if port != ResponsePort {
-							return fmt.Errorf("response sent to the wrong port: %s", port)
+							return module.Fail(fmt.Errorf("response sent to the wrong port: %s", port))
 						}
 						resp, ok := data.(Response)
 						if !ok {
-							return fmt.Errorf("response type is invalid")
+							return module.Fail(fmt.Errorf("response type is invalid"))
 						}
 						if fmt.Sprint(resp.OutputData) != "result" {
-							return fmt.Errorf("response sent the wrong result: %v", resp.OutputData)
+							return module.Fail(fmt.Errorf("response sent the wrong result: %v", resp.OutputData))
 						}
-						return nil
+						return module.Result{}
 					},
 				},
 			},
@@ -93,20 +93,20 @@ func TestComponent_Handle(t *testing.T) {
 				{
 					port: RequestPort,
 					msg:  Request{},
-					handler: func(_ context.Context, port string, data any) any {
+					handler: func(_ context.Context, port string, data any) module.Result {
 						if port != ResponsePort {
-							return fmt.Errorf("response sent to the wrong port: %s", port)
+							return module.Fail(fmt.Errorf("response sent to the wrong port: %s", port))
 						}
 						resp, ok := data.(Response)
 						if !ok {
-							return fmt.Errorf("response type is invalid")
+							return module.Fail(fmt.Errorf("response type is invalid"))
 						}
 
 						res, _ := resp.OutputData.(int64)
 						if res != 34 {
-							return fmt.Errorf("response sent the wrong result: %v", res)
+							return module.Fail(fmt.Errorf("response sent the wrong result: %v", res))
 						}
-						return nil
+						return module.Result{}
 					},
 				},
 			},
@@ -127,18 +127,18 @@ func TestComponent_Handle(t *testing.T) {
 					msg: Request{
 						InputData: "hello",
 					},
-					handler: func(_ context.Context, port string, data any) any {
+					handler: func(_ context.Context, port string, data any) module.Result {
 						if port != ResponsePort {
-							return fmt.Errorf("response sent to the wrong port: %s", port)
+							return module.Fail(fmt.Errorf("response sent to the wrong port: %s", port))
 						}
 						resp, ok := data.(Response)
 						if !ok {
-							return fmt.Errorf("response type is invalid")
+							return module.Fail(fmt.Errorf("response type is invalid"))
 						}
 						if fmt.Sprint(resp.OutputData) != "hello world" {
-							return fmt.Errorf("response sent the wrong result: %v", resp.OutputData)
+							return module.Fail(fmt.Errorf("response sent the wrong result: %v", resp.OutputData))
 						}
-						return nil
+						return module.Result{}
 					},
 				},
 			},
@@ -160,18 +160,18 @@ func TestComponent_Handle(t *testing.T) {
 					msg: Request{
 						InputData: "hello",
 					},
-					handler: func(_ context.Context, port string, data any) any {
+					handler: func(_ context.Context, port string, data any) module.Result {
 						if port != ResponsePort {
-							return fmt.Errorf("response sent to the wrong port: %s", port)
+							return module.Fail(fmt.Errorf("response sent to the wrong port: %s", port))
 						}
 						resp, ok := data.(Response)
 						if !ok {
-							return fmt.Errorf("response type is invalid")
+							return module.Fail(fmt.Errorf("response type is invalid"))
 						}
 						if fmt.Sprint(resp.OutputData) != "done" {
-							return fmt.Errorf("response sent the wrong result: %v", resp.OutputData)
+							return module.Fail(fmt.Errorf("response sent the wrong result: %v", resp.OutputData))
 						}
-						return nil
+						return module.Result{}
 					},
 				},
 			},
@@ -190,8 +190,8 @@ func TestComponent_Handle(t *testing.T) {
 				{
 					port: RequestPort,
 					msg:  Request{},
-					handler: func(_ context.Context, port string, data any) any {
-						return nil
+					handler: func(_ context.Context, port string, data any) module.Result {
+						return module.Result{}
 					},
 					wantErr: true,
 				},
@@ -213,18 +213,18 @@ func TestComponent_Handle(t *testing.T) {
 					msg: Request{
 						InputData: "hello",
 					},
-					handler: func(_ context.Context, port string, data any) any {
+					handler: func(_ context.Context, port string, data any) module.Result {
 						if port != ResponsePort {
-							return fmt.Errorf("response sent to the wrong port: %s", port)
+							return module.Fail(fmt.Errorf("response sent to the wrong port: %s", port))
 						}
 						resp, ok := data.(Response)
 						if !ok {
-							return fmt.Errorf("response type is invalid")
+							return module.Fail(fmt.Errorf("response type is invalid"))
 						}
 						if fmt.Sprint(resp.OutputData) != "done" {
-							return fmt.Errorf("response sent the wrong result: %v", resp.OutputData)
+							return module.Fail(fmt.Errorf("response sent the wrong result: %v", resp.OutputData))
 						}
-						return nil
+						return module.Result{}
 					},
 				},
 			},
@@ -246,21 +246,21 @@ func TestComponent_Handle(t *testing.T) {
 					msg: Request{
 						Context: "trace-123",
 					},
-					handler: func(_ context.Context, port string, data any) any {
+					handler: func(_ context.Context, port string, data any) module.Result {
 						if port != ErrorPort {
-							return fmt.Errorf("expected error port, got: %s", port)
+							return module.Fail(fmt.Errorf("expected error port, got: %s", port))
 						}
 						e, ok := data.(Error)
 						if !ok {
-							return fmt.Errorf("expected Error type")
+							return module.Fail(fmt.Errorf("expected Error type"))
 						}
 						if e.Context != "trace-123" {
-							return fmt.Errorf("context not passed through: %v", e.Context)
+							return module.Fail(fmt.Errorf("context not passed through: %v", e.Context))
 						}
 						if e.Error == "" {
-							return fmt.Errorf("error message is empty")
+							return module.Fail(fmt.Errorf("error message is empty"))
 						}
-						return nil
+						return module.Result{}
 					},
 				},
 			},
@@ -301,16 +301,16 @@ func TestComponent_Handle(t *testing.T) {
 						Context:   map[string]any{"traceId": "abc", "step": 42},
 						InputData: "data",
 					},
-					handler: func(_ context.Context, port string, data any) any {
+					handler: func(_ context.Context, port string, data any) module.Result {
 						resp := data.(Response)
 						ctx, ok := resp.Context.(map[string]any)
 						if !ok {
-							return fmt.Errorf("context type lost: %T", resp.Context)
+							return module.Fail(fmt.Errorf("context type lost: %T", resp.Context))
 						}
 						if ctx["traceId"] != "abc" {
-							return fmt.Errorf("context traceId mismatch: %v", ctx["traceId"])
+							return module.Fail(fmt.Errorf("context traceId mismatch: %v", ctx["traceId"]))
 						}
-						return nil
+						return module.Result{}
 					},
 				},
 			},
@@ -332,12 +332,12 @@ func TestComponent_Handle(t *testing.T) {
 					msg: Request{
 						Context: "my-ctx",
 					},
-					handler: func(_ context.Context, port string, data any) any {
+					handler: func(_ context.Context, port string, data any) module.Result {
 						e := data.(Error)
 						if e.Context != "my-ctx" {
-							return fmt.Errorf("context not passed to error: %v", e.Context)
+							return module.Fail(fmt.Errorf("context not passed to error: %v", e.Context))
 						}
-						return nil
+						return module.Result{}
 					},
 				},
 			},
@@ -364,13 +364,13 @@ func TestComponent_Handle(t *testing.T) {
 					msg: Request{
 						InputData: 5,
 					},
-					handler: func(_ context.Context, port string, data any) any {
+					handler: func(_ context.Context, port string, data any) module.Result {
 						resp := data.(Response)
 						res, _ := resp.OutputData.(int64)
 						if res != 15 {
-							return fmt.Errorf("expected 15, got: %v", resp.OutputData)
+							return module.Fail(fmt.Errorf("expected 15, got: %v", resp.OutputData))
 						}
-						return nil
+						return module.Result{}
 					},
 				},
 			},
@@ -391,16 +391,16 @@ func TestComponent_Handle(t *testing.T) {
 					msg: Request{
 						InputData: map[string]any{"name": "alice"},
 					},
-					handler: func(_ context.Context, port string, data any) any {
+					handler: func(_ context.Context, port string, data any) module.Result {
 						resp := data.(Response)
 						out, ok := resp.OutputData.(map[string]any)
 						if !ok {
-							return fmt.Errorf("expected map output, got: %T", resp.OutputData)
+							return module.Fail(fmt.Errorf("expected map output, got: %T", resp.OutputData))
 						}
 						if out["name"] != "alice" || out["upper"] != "ALICE" {
-							return fmt.Errorf("unexpected output: %v", out)
+							return module.Fail(fmt.Errorf("unexpected output: %v", out))
 						}
-						return nil
+						return module.Result{}
 					},
 				},
 			},
@@ -419,12 +419,12 @@ func TestComponent_Handle(t *testing.T) {
 				{
 					port: RequestPort,
 					msg:  Request{},
-					handler: func(_ context.Context, port string, data any) any {
+					handler: func(_ context.Context, port string, data any) module.Result {
 						resp := data.(Response)
 						if resp.OutputData != nil {
-							return fmt.Errorf("expected nil for undefined, got: %v", resp.OutputData)
+							return module.Fail(fmt.Errorf("expected nil for undefined, got: %v", resp.OutputData))
 						}
-						return nil
+						return module.Result{}
 					},
 				},
 			},
@@ -443,12 +443,12 @@ func TestComponent_Handle(t *testing.T) {
 				{
 					port: RequestPort,
 					msg:  Request{},
-					handler: func(_ context.Context, port string, data any) any {
+					handler: func(_ context.Context, port string, data any) module.Result {
 						resp := data.(Response)
 						if resp.OutputData != nil {
-							return fmt.Errorf("expected nil for null, got: %v", resp.OutputData)
+							return module.Fail(fmt.Errorf("expected nil for null, got: %v", resp.OutputData))
 						}
-						return nil
+						return module.Result{}
 					},
 				},
 			},
@@ -491,25 +491,25 @@ func TestComponent_Handle(t *testing.T) {
 				{
 					port: RequestPort,
 					msg:  Request{},
-					handler: func(_ context.Context, port string, data any) any {
+					handler: func(_ context.Context, port string, data any) module.Result {
 						resp := data.(Response)
 						res, _ := resp.OutputData.(int64)
 						if res != 1 {
-							return fmt.Errorf("first call expected 1, got: %v", resp.OutputData)
+							return module.Fail(fmt.Errorf("first call expected 1, got: %v", resp.OutputData))
 						}
-						return nil
+						return module.Result{}
 					},
 				},
 				{
 					port: RequestPort,
 					msg:  Request{},
-					handler: func(_ context.Context, port string, data any) any {
+					handler: func(_ context.Context, port string, data any) module.Result {
 						resp := data.(Response)
 						res, _ := resp.OutputData.(int64)
 						if res != 2 {
-							return fmt.Errorf("second call expected 2, got: %v", resp.OutputData)
+							return module.Fail(fmt.Errorf("second call expected 2, got: %v", resp.OutputData))
 						}
-						return nil
+						return module.Result{}
 					},
 				},
 			},
@@ -541,9 +541,5 @@ func dispatch(c module.Component, handler module.Handler, port string, msg any) 
 			return h.OnControl(context.Background(), msg)
 		}
 	}
-	res := c.Handle(context.Background(), handler, port, msg)
-	if err, ok := res.(error); ok {
-		return err
-	}
-	return nil
+	return c.Handle(context.Background(), handler, port, msg).Err()
 }
