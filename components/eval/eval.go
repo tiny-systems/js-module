@@ -100,23 +100,23 @@ func (h *Component) OnSettings(_ context.Context, msg any) error {
 }
 
 // Handle dispatches the RequestPort. System ports go through capabilities.
-func (h *Component) Handle(ctx context.Context, handler module.Handler, port string, msg any) any {
+func (h *Component) Handle(ctx context.Context, handler module.Handler, port string, msg any) module.Result {
 	if port != RequestPort {
-		return fmt.Errorf("unknown port: %s", port)
+		return module.Fail(fmt.Errorf("unknown port: %s", port))
 	}
 
 	in, ok := msg.(Request)
 	if !ok {
-		return fmt.Errorf("invalid input")
+		return module.Fail(fmt.Errorf("invalid input"))
 	}
 	if h.handler == nil {
-		return fmt.Errorf("handler is not initialised")
+		return module.Fail(fmt.Errorf("handler is not initialised"))
 	}
 
 	res, err := h.handler(sobek.Undefined(), h.runtime.ToValue(in.InputData))
 	if err != nil {
 		if !h.settings.EnableErrorPort {
-			return err
+			return module.Fail(err)
 		}
 		return handler(ctx, ErrorPort, Error{
 			Context: in.Context,
@@ -128,7 +128,7 @@ func (h *Component) Handle(ctx context.Context, handler module.Handler, port str
 
 	if pr, ok := result.(*sobek.Promise); ok {
 		if pr.State() != sobek.PromiseStateFulfilled {
-			return fmt.Errorf("%s", pr.Result().Export())
+			return module.Fail(fmt.Errorf("%s", pr.Result().Export()))
 		}
 		result = pr.Result().Export()
 	}
