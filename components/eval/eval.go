@@ -37,6 +37,8 @@ type ScriptItem Script
 
 type Settings struct {
 	EnableErrorPort bool         `json:"enableErrorPort" required:"true" title:"Enable Error Port" description:"If error happen, error port will emit an error message" tab:"Settings"`
+	InputData       InputData    `json:"inputData" configurable:"true" title:"Input object" description:"Schema and example data of the script's input. Downstream edges feeding this node must produce this shape." tab:"Settings"`
+	OutputData      OutputData   `json:"outputData" configurable:"true" title:"Output object" description:"Schema and example data of the script's output. Downstream edges from this node will be validated against this shape." tab:"Settings"`
 	Script          Script       `json:"script" required:"true" title:"Script" description:"Full ECMAScript 5.1 support. Experimental ESM support. Please CDN only ESM modules" tab:"Main script"`
 	Modules         []ScriptItem `json:"modules" required:"true" title:"Modules" description:"Full ECMAScript 5.1 support. Experimental ESM support. Please CDN only ESM modules." uniqueItems:"true" tab:"Includes"`
 }
@@ -83,7 +85,7 @@ func (h *Component) GetInfo() module.ComponentInfo {
 	return module.ComponentInfo{
 		Name:        ComponentName,
 		Description: "JS Eval",
-		Info:        "JavaScript evaluation (ECMAScript 5.1 + ESM imports). Script must export a default function: export default function(inputData) { return { result: inputData.value * 2 }; }. The function receives inputData (configured via edge) as its only argument. The return value becomes outputData on the response port. Context is NOT available inside the script — it passes through automatically from request to response. Use scenarios to define the output schema for downstream edge validation.",
+		Info:        "JavaScript evaluation (ECMAScript 5.1 + ESM imports). Script must export a default function: export default function(inputData) { return { result: inputData.value * 2 }; }. The function receives inputData as its only argument; the return value becomes outputData on the response port. Context is NOT available inside the script — it passes through automatically from request to response. Define settings.inputData (example + schema of the script's argument) and settings.outputData (example + schema of the script's return) so the validator can check incoming and outgoing edges without running the flow.",
 		Tags:        []string{"js", "javascript", "engine"},
 	}
 }
@@ -187,17 +189,21 @@ func (h *Component) init(s Settings) error {
 func (h *Component) Ports() []module.Port {
 	ports := []module.Port{
 		{
-			Name:          RequestPort,
-			Label:         "Request",
-			Position:      module.Left,
-			Configuration: Request{},
+			Name:     RequestPort,
+			Label:    "Request",
+			Position: module.Left,
+			Configuration: Request{
+				InputData: h.settings.InputData,
+			},
 		},
 		{
-			Name:          ResponsePort,
-			Position:      module.Right,
-			Label:         "Response",
-			Source:        true,
-			Configuration: Response{},
+			Name:     ResponsePort,
+			Position: module.Right,
+			Label:    "Response",
+			Source:   true,
+			Configuration: Response{
+				OutputData: h.settings.OutputData,
+			},
 		},
 		{
 			Name:          v1alpha1.SettingsPort,
