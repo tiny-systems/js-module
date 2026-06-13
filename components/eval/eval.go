@@ -85,7 +85,7 @@ func (h *Component) GetInfo() module.ComponentInfo {
 	return module.ComponentInfo{
 		Name:        ComponentName,
 		Description: "JS Eval",
-		Info:        "JavaScript evaluation (ECMAScript 5.1 + ESM imports). Script must export a default function: export default function(inputData) { return { result: inputData.value * 2 }; }. The function receives inputData as its only argument; the return value becomes outputData on the response port. Context is NOT available inside the script — it passes through automatically from request to response. Define settings.inputData (example + schema of the script's argument) and settings.outputData (example + schema of the script's return) so the validator can check incoming and outgoing edges without running the flow.",
+		Info:        "Escape hatch: run arbitrary logic inline when no typed component does what you need — reshape data, branch, compute, glue a flow together. No compile step, runs instantly (prefer this over wasm_eval for interactive work). JavaScript evaluation (ECMAScript 5.1 + ESM imports). Script must export a default function: export default function(inputData) { return { result: inputData.value * 2 }; }. The function receives inputData as its only argument; the return value becomes outputData on the response port. Context is NOT available inside the script — it passes through automatically from request to response. Define settings.inputData (example + schema of the script's argument) and settings.outputData (example + schema of the script's return) so the validator can check incoming and outgoing edges without running the flow.",
 		Tags:        []string{"js", "javascript", "engine"},
 	}
 }
