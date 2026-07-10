@@ -38,7 +38,7 @@ type ScriptItem Script
 type Settings struct {
 	EnableErrorPort bool         `json:"enableErrorPort" required:"true" title:"Enable Error Port" description:"If error happen, error port will emit an error message" tab:"Settings"`
 	InputData       InputData    `json:"inputData" configurable:"true" title:"Input object" description:"Schema and example data of the script's input. Downstream edges feeding this node must produce this shape." tab:"Settings"`
-	OutputData      OutputData   `json:"outputData" configurable:"true" title:"Output object" description:"Schema and example data of the script's output. Downstream edges from this node will be validated against this shape." tab:"Settings"`
+	OutputData      OutputData   `json:"outputData" required:"true" configurable:"true" title:"Output object" description:"Schema and example data of the script's output. REQUIRED: downstream edges from this node are validated against this shape, so leaving it empty makes every edge out of this node unverifiable. Set it to an example of exactly what your script returns." tab:"Settings"`
 	Script          Script       `json:"script" required:"true" title:"Script" description:"Full ECMAScript 5.1 support. Experimental ESM support. Please CDN only ESM modules" tab:"Main script"`
 	Modules         []ScriptItem `json:"modules" required:"true" title:"Modules" description:"Full ECMAScript 5.1 support. Experimental ESM support. Please CDN only ESM modules." uniqueItems:"true" tab:"Includes"`
 }
