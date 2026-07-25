@@ -2,6 +2,7 @@ package eval
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/grafana/sobek"
 	"github.com/tiny-systems/js-module/modules"
@@ -115,7 +116,20 @@ func (h *Component) Handle(ctx context.Context, handler module.Handler, port str
 		return module.Fail(fmt.Errorf("handler is not initialised"))
 	}
 
-	res, err := h.handler(sobek.Undefined(), h.runtime.ToValue(in.InputData))
+	// Round-trip inputData through JSON.parse so the script receives a native,
+	// mutable JS value. ToValue wraps Go slices/maps as proxies whose in-place
+	// mutations (Array.push, etc.) are lost when the return value is Export()ed
+	// — the classic broken ReAct-fold symptom (had to build a fresh array
+	// instead of pushing onto the input). With a native value, push works.
+	arg, err := h.jsValue(in.InputData)
+	if err != nil {
+		if !h.settings.EnableErrorPort {
+			return module.Fail(err)
+		}
+		return handler(ctx, ErrorPort, Error{Context: in.Context, Error: err.Error()})
+	}
+
+	res, err := h.handler(sobek.Undefined(), arg)
 	if err != nil {
 		if !h.settings.EnableErrorPort {
 			return module.Fail(err)
@@ -139,6 +153,26 @@ func (h *Component) Handle(ctx context.Context, handler module.Handler, port str
 		Context:    in.Context,
 		OutputData: result,
 	})
+}
+
+// jsValue converts a Go value into a native (JS-owned) sobek value by round-
+// tripping through JSON.parse, so a script can mutate it (Array.push, object
+// assignment, ...) and have those changes survive Export(). Returns Undefined
+// for nil input.
+func (h *Component) jsValue(v any) (sobek.Value, error) {
+	if v == nil {
+		return sobek.Undefined(), nil
+	}
+	data, err := json.Marshal(v)
+	if err != nil {
+		return nil, fmt.Errorf("marshal input: %w", err)
+	}
+	jsonObj := h.runtime.Get("JSON").ToObject(h.runtime)
+	parse, ok := sobek.AssertFunction(jsonObj.Get("parse"))
+	if !ok {
+		return nil, fmt.Errorf("JSON.parse unavailable in runtime")
+	}
+	return parse(sobek.Undefined(), h.runtime.ToValue(string(data)))
 }
 
 func (h *Component) init(s Settings) error {
