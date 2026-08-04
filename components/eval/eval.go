@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
+	"time"
 	"github.com/grafana/sobek"
 	"github.com/tiny-systems/js-module/modules"
 	"github.com/tiny-systems/module/api/v1alpha1"
@@ -42,6 +44,7 @@ type Settings struct {
 	OutputData      OutputData   `json:"outputData" required:"true" configurable:"true" title:"Output object" description:"Schema and example data of the script's output. REQUIRED: downstream edges from this node are validated against this shape, so leaving it empty makes every edge out of this node unverifiable. Set it to an example of exactly what your script returns." tab:"Settings"`
 	Script          Script       `json:"script" required:"true" title:"Script" description:"Full ECMAScript 5.1 support. Experimental ESM support. Please CDN only ESM modules" tab:"Main script"`
 	Modules         []ScriptItem `json:"modules" required:"true" title:"Modules" description:"Full ECMAScript 5.1 support. Experimental ESM support. Please CDN only ESM modules." uniqueItems:"true" tab:"Includes"`
+	TimeoutSeconds  int          `json:"timeoutSeconds" title:"Timeout (seconds)" description:"Wall-clock cap for one invocation; a script that exceeds it (e.g. an accidental infinite loop) is interrupted and fails the hop. 0 = default 30." tab:"Settings"`
 }
 
 type Error struct {
@@ -63,6 +66,11 @@ type Component struct {
 	settings Settings
 	handler  sobek.Callable
 	runtime  *sobek.Runtime
+	// mu serializes every use of the runtime. Sobek runtimes are
+	// single-threaded, but the scheduler dispatches each message in its
+	// own goroutine and OnSettings swaps the runtime under live traffic —
+	// unlocked concurrent entry corrupts evaluation state.
+	mu sync.Mutex
 }
 
 var defaultEngineSettings = Settings{
@@ -86,7 +94,7 @@ func (h *Component) GetInfo() module.ComponentInfo {
 	return module.ComponentInfo{
 		Name:        ComponentName,
 		Description: "JS Eval",
-		Info:        "Escape hatch: run arbitrary logic inline when no typed component does what you need — reshape data, branch, compute, glue a flow together. No compile step, runs instantly (prefer this over wasm_eval for interactive work). JavaScript evaluation (ECMAScript 5.1 + ESM imports). Script must export a default function: export default function(inputData) { return { result: inputData.value * 2 }; }. The function receives inputData as its only argument; the return value becomes outputData on the response port. Context is NOT available inside the script — it passes through automatically from request to response. Define settings.inputData (example + schema of the script's argument) and settings.outputData (example + schema of the script's return) so the validator can check incoming and outgoing edges without running the flow.",
+		Info:        "Escape hatch: run arbitrary logic inline when no typed component does what you need — reshape data, branch, compute, glue a flow together. No compile step, runs instantly (prefer this over wasm_eval for interactive work). Each invocation is capped by timeoutSeconds (default 30s) — runaway loops are interrupted, not wedged. JavaScript evaluation (ECMAScript 5.1 + ESM imports). Script must export a default function: export default function(inputData) { return { result: inputData.value * 2 }; }. The function receives inputData as its only argument; the return value becomes outputData on the response port. Context is NOT available inside the script — it passes through automatically from request to response. Define settings.inputData (example + schema of the script's argument) and settings.outputData (example + schema of the script's return) so the validator can check incoming and outgoing edges without running the flow.",
 		Tags:        []string{"js", "javascript", "engine"},
 	}
 }
@@ -98,6 +106,8 @@ func (h *Component) OnSettings(_ context.Context, msg any) error {
 	if !ok {
 		return fmt.Errorf("invalid settings")
 	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	h.settings = in
 	return h.init(in)
 }
@@ -112,9 +122,34 @@ func (h *Component) Handle(ctx context.Context, handler module.Handler, port str
 	if !ok {
 		return module.Fail(fmt.Errorf("invalid input"))
 	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	if h.handler == nil {
 		return module.Fail(fmt.Errorf("handler is not initialised"))
 	}
+
+	// Watchdog: interrupt the VM when the wall-clock cap passes or the hop's
+	// context is cancelled — otherwise an accidental while(true) wedges this
+	// goroutine (and, with the lock, the whole node) forever. The interrupt
+	// surfaces as an error from the call; ClearInterrupt re-arms the runtime
+	// for the next message.
+	timeout := time.Duration(h.settings.TimeoutSeconds) * time.Second
+	if timeout <= 0 {
+		timeout = 30 * time.Second
+	}
+	watchdogDone := make(chan struct{})
+	defer close(watchdogDone)
+	go func(rt *sobek.Runtime) {
+		select {
+		case <-watchdogDone:
+		case <-ctx.Done():
+			rt.Interrupt(fmt.Sprintf("script interrupted: %v", ctx.Err()))
+		case <-time.After(timeout):
+			rt.Interrupt(fmt.Sprintf("script timeout after %s (timeoutSeconds setting)", timeout))
+		}
+	}(h.runtime)
+	defer h.runtime.ClearInterrupt()
 
 	// Round-trip inputData through JSON.parse so the script receives a native,
 	// mutable JS value. ToValue wraps Go slices/maps as proxies whose in-place

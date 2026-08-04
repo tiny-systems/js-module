@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/tiny-systems/module/api/v1alpha1"
 	"github.com/tiny-systems/module/module"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestComponent_Handle(t *testing.T) {
@@ -542,4 +544,62 @@ func dispatch(c module.Component, handler module.Handler, port string, msg any) 
 		}
 	}
 	return c.Handle(context.Background(), handler, port, msg).Err()
+}
+
+// TestComponent_ConcurrentHandle hammers one component from many goroutines —
+// the scheduler dispatches every message in its own goroutine, and an
+// unserialized sobek runtime corrupts state or panics under this load.
+// Run with -race to make the old defect visible.
+func TestComponent_ConcurrentHandle(t *testing.T) {
+	c := (&Component{}).Instance().(*Component)
+	err := c.OnSettings(context.Background(), Settings{
+		Script: Script{Name: "index.js", Content: `export default function(inp) { return {doubled: inp.n * 2} }`},
+	})
+	if err != nil {
+		t.Fatalf("OnSettings: %v", err)
+	}
+	handler := func(ctx context.Context, port string, msg any) module.Result { return module.Ok(nil) }
+
+	var wg sync.WaitGroup
+	for i := 0; i < 32; i++ {
+		wg.Add(1)
+		go func(n int) {
+			defer wg.Done()
+			res := c.Handle(context.Background(), handler, RequestPort, Request{InputData: map[string]any{"n": n}})
+			if res.Err() != nil {
+				t.Errorf("Handle(%d): %v", n, res.Err())
+			}
+		}(i)
+	}
+	wg.Wait()
+}
+
+// TestComponent_TimeoutInterruptsInfiniteLoop proves an accidental
+// while(true) fails the hop instead of wedging the goroutine forever,
+// and that the runtime stays usable for the next message.
+func TestComponent_TimeoutInterruptsInfiniteLoop(t *testing.T) {
+	c := (&Component{}).Instance().(*Component)
+	err := c.OnSettings(context.Background(), Settings{
+		Script:         Script{Name: "index.js", Content: `export default function(inp) { if (inp.spin) { while(true){} } return {ok: true} }`},
+		TimeoutSeconds: 1,
+	})
+	if err != nil {
+		t.Fatalf("OnSettings: %v", err)
+	}
+	handler := func(ctx context.Context, port string, msg any) module.Result { return module.Ok(nil) }
+
+	start := time.Now()
+	res := c.Handle(context.Background(), handler, RequestPort, Request{InputData: map[string]any{"spin": true}})
+	if res.Err() == nil {
+		t.Fatal("expected timeout error, got success")
+	}
+	if elapsed := time.Since(start); elapsed > 5*time.Second {
+		t.Fatalf("interrupt took too long: %s", elapsed)
+	}
+
+	// The runtime must recover for the next message.
+	res = c.Handle(context.Background(), handler, RequestPort, Request{InputData: map[string]any{"spin": false}})
+	if res.Err() != nil {
+		t.Fatalf("runtime unusable after interrupt: %v", res.Err())
+	}
 }
