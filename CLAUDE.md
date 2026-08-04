@@ -1,4 +1,4 @@
-# Claude Code Rules for HTTP Module
+# Claude Code Rules for JS Module
 
 ## Code Style
 

@@ -6,7 +6,9 @@ JavaScript evaluation engine for inline scripting within flows.
 
 | Component | Description |
 |-----------|-------------|
-| JS Eval | Execute JavaScript (ES5) with ESM module support over HTTP |
+| JS Eval | Execute JavaScript (ECMAScript 5.1 + ESM imports) with ESM module support over HTTP |
+
+Scripts run in a bare interpreter: no `console`, `fetch`, or `setTimeout` globals are available inside scripts.
 
 ## Installation
 
